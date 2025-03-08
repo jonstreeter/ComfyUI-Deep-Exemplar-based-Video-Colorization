@@ -16,3 +16,4 @@ tensorboard
 future
 numba
 pypng
+opencv-python>=4.5
