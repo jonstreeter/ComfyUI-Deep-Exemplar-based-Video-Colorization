@@ -125,8 +125,8 @@ Example Workflow provided in Workflows folder
 
 <!-- SUGGESTION: Link to a short YouTube video or host GIFs showing your node in action colorizing a sample video clip. -->
 Check out this Sample video showing the node in action!
-<!-- Video Example -->
-<video controls width="720" src="assets/Why_A_Duck_Colorized.mp4"></video>
+
+[Video](https://github.com/jonstreeter/ComfyUI-Deep-Exemplar-based-Video-Colorization/raw/refs/heads/main/assets/Why_A_Duck_Colorized.mp4)
 
 ## Citation (Original Paper)
 
