@@ -101,11 +101,7 @@ After installation and restarting ComfyUI, you can find the nodes under the "Dee
 
 ### Example Workflows
 
-<!-- SUGGESTION: Insert a screenshot of a simple image colorization workflow -->
-*Screenshot showing: Load Image (grayscale) -> Load Image (color ref) -> DeepExColorImageNode -> Preview Image*
-
-<!-- SUGGESTION: Insert a screenshot of a simple video colorization workflow -->
-*Screenshot showing: Load Video -> DeepExColorVideoNode (with color ref loaded) -> Save Animated WEBP*
+Example Workflow provided in Workflows folder
 
 ### Tips
 
@@ -128,7 +124,9 @@ After installation and restarting ComfyUI, you can find the nodes under the "Dee
 <img src='assets/sample3.png' alt="Result Example 3"/>
 
 <!-- SUGGESTION: Link to a short YouTube video or host GIFs showing your node in action colorizing a sample video clip. -->
-Check out this [Sample Video Clip]() showing the node in action!
+Check out this Sample video showing the node in action!
+<!-- Video Example -->
+<video controls width="720" src="assets/Why_A_Duck_Colorized.mp4"></video>
 
 ## Citation (Original Paper)
 
