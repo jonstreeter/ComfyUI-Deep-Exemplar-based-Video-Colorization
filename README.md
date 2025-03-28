@@ -117,13 +117,6 @@ Example Workflow provided in Workflows folder
 <!-- You can reuse/adapt images from the original project's assets folder if appropriate -->
 <img src='assets/sample1.png' alt="Comparison Example 1"/>
 
-## More Examples
-
-<!-- SUGGESTION: Create a few more result images or short animated GIFs/WEBP files showing video colorization -->
-<img src='assets/sample2.png' alt="Result Example 2"/>
-<img src='assets/sample3.png' alt="Result Example 3"/>
-
-<!-- SUGGESTION: Link to a short YouTube video or host GIFs showing your node in action colorizing a sample video clip. -->
 Check out this Sample video showing the node in action!
 
 [Video](https://github.com/jonstreeter/ComfyUI-Deep-Exemplar-based-Video-Colorization/raw/refs/heads/main/assets/Why_A_Duck_Colorized.mp4)
