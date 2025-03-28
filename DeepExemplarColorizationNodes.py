@@ -22,9 +22,9 @@ if not hasattr(cv2.ximgproc, 'createFastGlobalSmootherFilter'):
         if hasattr(cv2.ximgproc, 'createFastGlobalSmootherFilter'):
             print("Installation successful and function is now available.")
         else:
-            print("Installation attempted, but function is still unavailable. A restart might be required.")
+            print("Installation attempted, but function is still unavailable. Please install or upgrade opencv-contrib-python (e.g., 'pip install --upgrade opencv-contrib-python') and restart ComfyUI.")
     except Exception as e:
-        print(f"Failed to install opencv-contrib-python: {e}")
+        print(f"Failed to install opencv-contrib-python: {e}\nPlease install opencv-contrib-python manually and restart ComfyUI.")
 
 WLS_FILTER_AVAILABLE = hasattr(cv2.ximgproc, 'createFastGlobalSmootherFilter')
 
@@ -36,7 +36,7 @@ from PIL import Image
 import torchvision.transforms as Tlib
 from tqdm import tqdm as console_tqdm
 
-# Import ComfyUI's internal ProgressBar for GUI updates.
+# Import ComfyUI's internal ProgressBar for GUI progress updates.
 from comfy.utils import ProgressBar
 
 from utils.util_distortion import CenterPad, Normalize, RGB2Lab, ToTensor
@@ -52,7 +52,6 @@ def load_models_if_needed():
     global MODELS_LOADED, NONLOCAL_NET, COLOR_NET, VGG_NET
     if MODELS_LOADED:
         return
-
     print("[DeepExemplar] Loading model checkpoints...")
     script_dir = os.path.dirname(os.path.abspath(__file__))
     nonlocal_ckpt = os.path.join(script_dir, "checkpoints", "video_moredata_l1", "nonlocal_net_iter_76000.pth")
@@ -125,8 +124,8 @@ class DeepExColorImageNode:
             "required": {
                 "image_to_colorize": ("IMAGE",),
                 "reference_image": ("IMAGE",),
-                "target_height": ("INT", {"default":432, "min":16, "max":4096}),
                 "target_width": ("INT", {"default":768, "min":16, "max":4096}),
+                "target_height": ("INT", {"default":432, "min":16, "max":4096}),
                 "wls_filter_on": ("BOOLEAN", {"default":True}),
                 "lambda_value": ("FLOAT", {"default":500.0, "min":0, "max":2000}),
                 "sigma_color": ("FLOAT", {"default":4.0, "min":0, "max":50}),
@@ -137,11 +136,12 @@ class DeepExColorImageNode:
     CATEGORY = "DeepExemplar/Image"
 
     def colorize_image(self, image_to_colorize: torch.Tensor, reference_image: torch.Tensor,
-                         target_height: int, target_width: int, wls_filter_on: bool,
+                         target_width: int, target_height: int, wls_filter_on: bool,
                          lambda_value: float, sigma_color: float) -> (list,):
         load_models_if_needed()
+        # Note: adjust_target_size expects (height, width); here we pass target_height, target_width.
         final_h, final_w = adjust_target_size(target_height, target_width, 64, 64, 32)
-        print(f"[DeepExColorImageNode] Adjusted size: ({target_height}, {target_width}) -> ({final_h}, {final_w})")
+        print(f"[DeepExColorImageNode] Adjusted size: ({target_width}, {target_height}) -> ({final_w}, {final_h})")
         transform = build_test_py_transform((final_h, final_w))
         src_pil = tensor_to_pil(image_to_colorize)
         ref_pil = tensor_to_pil(reference_image)
@@ -153,7 +153,7 @@ class DeepExColorImageNode:
         I_ref_ab = ref_half[:, 1:3, :, :]
         I_ref_rgb = tensor_lab2rgb(torch.cat((uncenter_l(I_ref_l), I_ref_ab), dim=1)).to(ref_half.device)
         with torch.no_grad():
-            features_B = VGG_NET(I_ref_rgb, ["r12","r22","r32","r42","r52"], preprocess=True)
+            features_B = VGG_NET(I_ref_rgb, ["r12", "r22", "r32", "r42", "r52"], preprocess=True)
             I_ab_predict, _, _ = frame_colorization(
                 src_half, ref_half, torch.zeros_like(src_half),
                 features_B, VGG_NET, NONLOCAL_NET, COLOR_NET,
@@ -161,7 +161,7 @@ class DeepExColorImageNode:
             )
         ab_up = F.interpolate(I_ab_predict, scale_factor=2.0, mode="bilinear", align_corners=False) * 1.25
         if wls_filter_on and WLS_FILTER_AVAILABLE:
-            guide_l = uncenter_l(src_lab_full[:, 0:1, :, :]) * (255.0 / 100.0)
+            guide_l = uncenter_l(src_lab_full[:, 0:1, :, :]) * (255.0/100.0)
             guide_np = guide_l[0, 0].detach().cpu().numpy().astype(np.uint8)
             wlsf = cv2.ximgproc.createFastGlobalSmootherFilter(guide_np, lambda_value, sigma_color)
             a_np = ab_up[0, 0].detach().cpu().numpy()
@@ -173,7 +173,7 @@ class DeepExColorImageNode:
             ab_up = torch.cat([a_t, b_t], dim=1)
         else:
             if wls_filter_on and not WLS_FILTER_AVAILABLE:
-                print("[DeepExColorImageNode] Warning: 'createFastGlobalSmootherFilter' not available; skipping filtering.")
+                print("[DeepExColorImageNode] Warning: 'createFastGlobalSmootherFilter' not available; skipping filtering. To fix, install or upgrade opencv-contrib-python (e.g., 'pip install --upgrade opencv-contrib-python') and restart ComfyUI.")
         out_np = batch_lab2rgb_transpose_mc(src_lab_full[:, 0:1, :, :], ab_up)
         out_tensor = torch.from_numpy(out_np).float().div(255.0)
         return ([out_tensor],)
@@ -187,8 +187,8 @@ class DeepExColorVideoNode:
                 "reference_image": ("IMAGE",),
                 "frame_propagate": ("BOOLEAN", {"default":True}),
                 "use_half_resolution": ("BOOLEAN", {"default":True}),
-                "target_height": ("INT", {"default":432, "min":16, "max":4096}),
                 "target_width": ("INT", {"default":768, "min":16, "max":4096}),
+                "target_height": ("INT", {"default":432, "min":16, "max":4096}),
                 "wls_filter_on": ("BOOLEAN", {"default":True}),
                 "lambda_value": ("FLOAT", {"default":500.0, "min":0, "max":2000}),
                 "sigma_color": ("FLOAT", {"default":4.0, "min":0, "max":50}),
@@ -200,13 +200,13 @@ class DeepExColorVideoNode:
 
     def colorize_video(self, video_frames: any, reference_image: torch.Tensor,
                        frame_propagate: bool, use_half_resolution: bool,
-                       target_height: int, target_width: int,
-                       wls_filter_on: bool, lambda_value: float, sigma_color: float) -> (list,):
+                       target_width: int, target_height: int, wls_filter_on: bool,
+                       lambda_value: float, sigma_color: float) -> (list,):
         load_models_if_needed()
         final_h, final_w = adjust_target_size(target_height, target_width, 64, 64, 32)
-        print(f"[DeepExColorVideoNode] Adjusted size: ({target_height}, {target_width}) -> ({final_h}, {final_w})")
+        print(f"[DeepExColorVideoNode] Adjusted size: ({target_width}, {target_height}) -> ({final_w}, {final_h})")
         if wls_filter_on and not WLS_FILTER_AVAILABLE:
-            print("[DeepExColorVideoNode] Warning: 'createFastGlobalSmootherFilter' not available; skipping filtering.")
+            print("[DeepExColorVideoNode] Warning: 'createFastGlobalSmootherFilter' not available; skipping filtering. To fix, install or upgrade opencv-contrib-python (e.g., 'pip install --upgrade opencv-contrib-python') and restart ComfyUI.")
         if isinstance(video_frames, list):
             frames_list = video_frames
         elif isinstance(video_frames, torch.Tensor):
@@ -268,15 +268,15 @@ class DeepExColorVideoNode:
                         )
                     last_lab = None
             if use_half_resolution:
-                ab_up = F.interpolate(I_ab, scale_factor=2.0, mode="bilinear", align_corners=False)*1.25
+                ab_up = F.interpolate(I_ab, scale_factor=2.0, mode="bilinear", align_corners=False) * 1.25
             else:
                 ab_up = I_ab.clone()
             if wls_filter_on and WLS_FILTER_AVAILABLE:
-                guide_l = uncenter_l(frm_lab_full[:, 0:1, :, :])*(255.0/100.0)
-                guide_np = guide_l[0,0].detach().cpu().numpy().astype(np.uint8)
+                guide_l = uncenter_l(frm_lab_full[:, 0:1, :, :]) * (255.0/100.0)
+                guide_np = guide_l[0, 0].detach().cpu().numpy().astype(np.uint8)
                 wlsf = cv2.ximgproc.createFastGlobalSmootherFilter(guide_np, lambda_value, sigma_color)
-                a_np = ab_up[0,0].detach().cpu().numpy()
-                b_np = ab_up[0,1].detach().cpu().numpy()
+                a_np = ab_up[0, 0].detach().cpu().numpy()
+                b_np = ab_up[0, 1].detach().cpu().numpy()
                 a_filt = wlsf.filter(a_np)
                 b_filt = wlsf.filter(b_np)
                 a_t = torch.from_numpy(a_filt).unsqueeze(0).unsqueeze(0).to(ab_up.device)
