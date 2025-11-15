@@ -1,5 +1,5 @@
 import torch
-from utils.util import *
+from ..utils.util import *
 
 
 def warp_color(IA_l, IB_lab, features_B, vggnet, nonlocal_net, colornet, feature_noise=0, temperature=0.01):

@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
-from utils.util import feature_normalize
+from ..utils.util import feature_normalize
 
 postpa = torchvision.transforms.Compose(
     [

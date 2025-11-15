@@ -1,4 +1,41 @@
+# Backup files
+*_old_backup.py
+*_new.py
+*_backup.txt
+requirements_old_backup.txt
+requirements_new.txt
+README_NEW.md
+
+# Development files
+.claude/
+nul
+
+# Python
 __pycache__/
-*.pyc
-*~
-*.pth
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Checkpoints (too large for git)
+checkpoints/*.pth
+data/*.pth
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.log

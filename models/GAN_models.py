@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from models.spectral_normalization import SpectralNorm
+from .spectral_normalization import SpectralNorm
 
 
 class Generator(nn.Module):

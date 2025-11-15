@@ -125,20 +125,33 @@ model = nn.Sequential(  # Sequential,
 )
 
 
-model.load_state_dict(torch.load("data/vgg19_gray.pth"))
-vgg19_gray_net = torch.nn.Sequential()
-for (name, layer) in model._modules.items():
-    vgg19_gray_net.add_module(layer_names[int(name)], model[int(name)])
+# Lazy loading: Create VGG network only when needed
+_vgg19_gray_net = None
 
-for param in vgg19_gray_net.parameters():
-    param.requires_grad = False
-vgg19_gray_net.eval()
+def _get_vgg19_gray_net():
+    global _vgg19_gray_net
+    if _vgg19_gray_net is None:
+        import os
+        # Get the path to the model file relative to this script
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        model_path = os.path.join(script_dir, "..", "data", "vgg19_conv.pth")
+
+        model.load_state_dict(torch.load(model_path, map_location='cpu'))
+        _vgg19_gray_net = torch.nn.Sequential()
+        for (name, layer) in model._modules.items():
+            _vgg19_gray_net.add_module(layer_names[int(name)], model[int(name)])
+
+        for param in _vgg19_gray_net.parameters():
+            param.requires_grad = False
+        _vgg19_gray_net.eval()
+
+    return _vgg19_gray_net
 
 
 class vgg19_gray(torch.nn.Module):
     def __init__(self, requires_grad=False):
         super(vgg19_gray, self).__init__()
-        vgg_pretrained_features = vgg19_gray_net
+        vgg_pretrained_features = _get_vgg19_gray_net()
         self.slice1 = torch.nn.Sequential()
         self.slice2 = torch.nn.Sequential()
         self.slice3 = torch.nn.Sequential()
@@ -165,7 +178,7 @@ class vgg19_gray(torch.nn.Module):
 class vgg19_gray_new(torch.nn.Module):
     def __init__(self, requires_grad=False):
         super(vgg19_gray_new, self).__init__()
-        vgg_pretrained_features = vgg19_gray_net
+        vgg_pretrained_features = _get_vgg19_gray_net()
         self.slice0 = torch.nn.Sequential()
         self.slice1 = torch.nn.Sequential()
         self.slice2 = torch.nn.Sequential()

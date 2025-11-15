@@ -4,9 +4,20 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models as torch_models
-from utils.util import uncenter_l, vgg_preprocess
+from ..utils.util import uncenter_l, vgg_preprocess
 
-from models.vgg19_gray import vgg19_gray, vgg19_gray_new
+from .vgg19_gray import vgg19_gray, vgg19_gray_new
+
+# Global flag for SageAttention (set by nodes)
+USE_SAGE_ATTENTION = False
+
+# Try to import SageAttention
+try:
+    from sageattention import sageattn
+    SAGE_ATTENTION_AVAILABLE = True
+except ImportError:
+    SAGE_ATTENTION_AVAILABLE = False
+    sageattn = None
 
 
 def find_local_patch(x, patch_size):
@@ -178,13 +189,30 @@ class Self_Attn(nn.Module):
         m_batchsize, C, width, height = x.size()
         proj_query = self.query_conv(x).view(m_batchsize, -1, width * height).permute(0, 2, 1)  # B X N X C
         proj_key = self.key_conv(x).view(m_batchsize, -1, width * height)  # B X C x N
-        energy = torch.bmm(proj_query, proj_key)  # transpose check
-        attention = self.softmax(energy)  # B X (N) X (N)
         proj_value = self.value_conv(x).view(m_batchsize, -1, width * height)  # B X C X N
 
-        out = torch.bmm(proj_value, attention.permute(0, 1, 2))
-        out = out.view(m_batchsize, C, width, height)
+        # Use SageAttention if enabled and available
+        if USE_SAGE_ATTENTION and SAGE_ATTENTION_AVAILABLE:
+            # SageAttention expects: query (B, N, C), key (B, N, C), value (B, N, C)
+            # We have: query (B, N, C), key (B, C, N), value (B, C, N)
+            proj_key_t = proj_key.permute(0, 2, 1)  # B X N X C
+            proj_value_t = proj_value.permute(0, 2, 1)  # B X N X C
+            try:
+                # SageAttention returns (B, N, C)
+                out = sageattn(proj_query, proj_key_t, proj_value_t, is_causal=False)
+                out = out.permute(0, 2, 1)  # B X C X N
+            except Exception as e:
+                # Fallback to standard attention if SageAttention fails
+                energy = torch.bmm(proj_query, proj_key)
+                attention = self.softmax(energy)  # B X (N) X (N)
+                out = torch.bmm(proj_value, attention.permute(0, 1, 2))
+        else:
+            # Standard attention
+            energy = torch.bmm(proj_query, proj_key)  # transpose check
+            attention = self.softmax(energy)  # B X (N) X (N)
+            out = torch.bmm(proj_value, attention.permute(0, 1, 2))
 
+        out = out.view(m_batchsize, C, width, height)
         out = self.gamma * out + x
         return out
 
